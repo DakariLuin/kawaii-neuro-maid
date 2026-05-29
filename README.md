@@ -19,21 +19,22 @@
 Проект спроектирован по принципам чистой архитектуры (*Clean Architecture*) и состоит из 5 независимых слабосвязанных модулей:
 
 ```mermaid
-graph TD
-    %% Внешние сущности
-    Sensors[Сенсорные Узлы <br> Физический Мир] -->|Сырые сигналы| HSI
+graph LR
+    %% 1. Входной поток (Только запись в БД)
+    Sensors[Датчики] -->|MQTT| Broker(MQTT Broker)
+    Telegram[Telegram / UI] -->|MQTT| Broker
+    Broker -->|Сырые события| ETL[1. ETL / SQLite]
     
-    %% Границы системы Kawaii Neuro Maid
-    subgraph KNM [KAWAII NEURO MAID]
-        HSI[5. Аппаратно-Программный Интерфейс <br> Gateway / HSI] -->|Сериализованный поток| ETL[1. ETL-модуль <br> Парсер и подготовка данных]
-        ETL -->|Временной ряд| Chaos[2. Chaos Engine <br> Анализ хаоса / Ляпунов]
-        Chaos -->|Показатели нелинейности| Predictor[3. Predictor Core <br> Нейросеть LSTM / GRU]
-        Evolution[4. Evolutionary Optimizer <br> Генетический алгоритм] -.->|Оптимизация архитектуры| Predictor
-        Predictor -->|Управляющий сигнал| HSI
-    end
+    %% 2. Рабочий поток (Чтение из БД -> Вывод в реле)
+    ETL -->|Анализ логов| Predictor[3. Predictor Core]
+    Predictor -->|Матрица чисел| Chaos[2. Chaos Engine]
+    Chaos -->|Показатель Ляпунова| Predictor
+    Predictor -->|Команда действия| Broker
+    Broker -->|MQTT| Actuators[Реле / Розетки]
     
-    %% Выход во внешний мир
-    HSI -->|Физическое воздействие| Actuators[Исполнительные Узлы <br> Actuators]
+    %% 3. Фоновый поток (Обучение)
+    ETL -->|История и фидбек| Optimizer[4. Evolutionary Optimizer]
+    Optimizer -.->|Обновление файла модели| Predictor
 
 ```
 
