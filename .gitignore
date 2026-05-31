@@ -1,0 +1,8 @@
+venv/
+.venv/
+__pycache__/
+
+sandbox/*.png
+*.png
+
+data/
